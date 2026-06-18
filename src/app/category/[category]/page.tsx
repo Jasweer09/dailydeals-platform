@@ -24,9 +24,30 @@ export async function generateMetadata({
   const { category } = await params;
   if (!isCategory(category)) return {};
   const label = CATEGORY_LABELS[category];
+  const title = `${label} deals`;
+  const description = `The cheapest ${label.toLowerCase()} deals in the US right now, updated all day.`;
+  
   return {
-    title: `${label} deals`,
-    description: `The cheapest ${label.toLowerCase()} deals in the US right now, updated all day.`,
+    title,
+    description,
+    keywords: [
+      `${label.toLowerCase()} deals`,
+      `cheap ${label.toLowerCase()}`,
+      `${label.toLowerCase()} discounts`,
+      `${label.toLowerCase()} sales`,
+      `best ${label.toLowerCase()} deals`,
+    ],
+    openGraph: {
+      type: "website",
+      url: `https://dailydeals-platform.vercel.app/category/${category}`,
+      title,
+      description,
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
   };
 }
 

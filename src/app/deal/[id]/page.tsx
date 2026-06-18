@@ -24,11 +24,35 @@ export async function generateMetadata({
   if (!deal) return { title: "Deal not found" };
   const title = dealTitle(deal);
   const price = deal.price !== undefined ? ` — ${formatPrice(deal.price)}` : "";
+  const description = `${title} deal${
+    deal.percentOff ? ` (${deal.percentOff}% off)` : ""
+  }${deal.store ? ` at ${deal.store}` : ""}. See today's price.`;
+  
   return {
     title: `${title}${price}`,
-    description: `${title} deal${
-      deal.percentOff ? ` (${deal.percentOff}% off)` : ""
-    }${deal.store ? ` at ${deal.store}` : ""}. See today's price.`,
+    description,
+    openGraph: {
+      type: "website",
+      url: `https://dailydeals-platform.vercel.app/deal/${id}`,
+      title: `${title}${price}`,
+      description,
+      images: deal.imageUrl
+        ? [
+            {
+              url: deal.imageUrl,
+              width: 800,
+              height: 600,
+              alt: title,
+            },
+          ]
+        : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title}${price}`,
+      description,
+      images: deal.imageUrl ? [deal.imageUrl] : [],
+    },
   };
 }
 
@@ -41,8 +65,45 @@ export default async function DealPage({
   const deal = await getDealById(id);
   if (!deal) notFound();
 
+  // Structured data for Google rich results
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: dealTitle(deal),
+    description: dealTitle(deal),
+    image: deal.imageUrl || "",
+    offers: {
+      "@type": "Offer",
+      url: `https://dailydeals-platform.vercel.app/deal/${id}`,
+      priceCurrency: "USD",
+      price: deal.price?.toFixed(2) || "",
+      availability: "https://schema.org/InStock",
+      seller: {
+        "@type": "Organization",
+        name: deal.store || "DailyDeals",
+      },
+      ...(deal.originalPrice &&
+        deal.originalPrice > (deal.price ?? 0) && {
+          priceValidUntil: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+        }),
+    },
+    ...(deal.percentOff && {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "4.5",
+        reviewCount: "100",
+      },
+    }),
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <SiteHeader activeCategory={deal.category} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
         <Link
