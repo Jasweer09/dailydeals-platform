@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
-import { loadAllDeals, getCategoryCounts } from "@/lib/deals";
+import { loadAllDeals } from "@/lib/deals";
 import { CATEGORIES } from "@/lib/types";
+
+export const revalidate = 3600; // Regenerate every hour
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://dailydeals-platform.vercel.app";
-  const deals = await loadAllDeals();
-
+  
   // Homepage
   const routes: MetadataRoute.Sitemap = [
     {
@@ -26,14 +27,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  // Individual deal pages
-  for (const deal of deals) {
-    routes.push({
-      url: `${baseUrl}/deal/${deal.id}`,
-      lastModified: deal.fetchedAt ? new Date(deal.fetchedAt) : new Date(),
-      changeFrequency: "daily",
-      priority: 0.7,
-    });
+  // Load deals with error handling
+  try {
+    const deals = await loadAllDeals();
+    
+    // Individual deal pages
+    for (const deal of deals) {
+      routes.push({
+        url: `${baseUrl}/deal/${deal.id}`,
+        lastModified: deal.fetchedAt ? new Date(deal.fetchedAt) : new Date(),
+        changeFrequency: "daily",
+        priority: 0.7,
+      });
+    }
+  } catch (error) {
+    console.error("Sitemap: Failed to load deals", error);
+    // Return routes with just homepage and categories if deals fail
   }
 
   return routes;
